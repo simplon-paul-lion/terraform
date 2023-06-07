@@ -1,0 +1,6 @@
+.terraform/*
+service_principal.json
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.lock.hcl
+.gitingore
