@@ -11,7 +11,7 @@ variable "desc_infra" {
 variable "name" {
   description = "define the start of naming resources"
   type        = string
-  default     = "paul-bf10"
+  default     = "bf10-paul"
 }
 
 variable "location" {
@@ -21,14 +21,14 @@ variable "location" {
 
 variable "vnet_cidr" {
   default = ["10.0.0.0/16"]
-  
+
 }
 
 variable "subnet" {
-  type = map
+  type = map(any)
   default = {
     sub1 : ["10.0.1.0/24"]
-    sub2 : ["10.0.2.0/24"]  
+    sub2 : ["10.0.2.0/24"]
   }
-  
+
 }

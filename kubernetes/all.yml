@@ -1,0 +1,165 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingressvote
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+spec:
+  rules:
+  - host: voteapp.simplon-lion.space
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: clustvoteapp
+            port:
+              number: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace : prod
+  labels:
+    app: redislb
+spec:
+  selector:
+    matchLabels:
+      app: redislb
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: redislb
+    spec:
+      volumes: 
+      - name: vol
+        persistentVolumeClaim:
+          claimName: redisclaim
+      containers:
+      - name: redis
+        image: redis
+        args: ["--requirepass","$(REDIS_PWD)"]
+        env:
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "no"
+        - name: REDIS_PWD
+          valueFrom:
+            secretKeyRef:
+              name: redispw
+              key: password
+        ports:
+        - containerPort: 6379
+          name: redis
+        volumeMounts:
+        - name: vol
+          mountPath: "/data"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clustredis
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+  selector:
+    app: redislb
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redispw
+type: Opaque
+data:
+  password: cGFzc3dvcmQ=
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: redisstor
+provisioner: kubernetes.io/azure-disk
+parameters:
+  skuName: Standard_LRS
+allowVolumeExpansion: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redisclaim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: redisstor
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voteapp
+  namespace: prod
+  labels:
+    app: voteapplb
+spec:
+  selector:
+    matchLabels:
+      app: voteapplb
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: voteapplb
+    spec:
+      containers:
+      - name: voteapp
+        image: grabibel/voteapp_brief8_gs:1.0.123
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 250m
+          limits:
+            cpu: 500m
+        env:
+        - name: REDIS
+          value: "clustredis"
+        - name: STRESS_SECS
+          value: "2"
+        - name: REDIS_PWD
+          valueFrom:
+            secretKeyRef:
+              name: redispw
+              key: password
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: autoscalevoteraja
+spec:
+  maxReplicas: 8
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: voteapp
+  targetCPUUtilizationPercentage: 70
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clustvoteapp
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+  selector:
+    app: voteapplb
