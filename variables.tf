@@ -3,7 +3,8 @@ variable "desc_infra" {
   type        = map(bool)
   default = {
     is_subnet = false
-    is_aks    = true
+    is_vm     = false
+    is_aks    = false
   }
 
 }
@@ -11,7 +12,7 @@ variable "desc_infra" {
 variable "name" {
   description = "define the start of naming resources"
   type        = string
-  default     = "bf10-paul"
+  default     = "bf10paul"
 }
 
 variable "location" {

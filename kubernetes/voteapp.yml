@@ -2,14 +2,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: voteapp
-  namespace: prod
   labels:
     app: voteapplb
 spec:
   selector:
     matchLabels:
       app: voteapplb
-  replicas: 2
+  replicas: 1
   template:
     metadata:
       labels:
@@ -17,14 +16,16 @@ spec:
     spec:
       containers:
       - name: voteapp
-        image: grabibel/voteapp_brief8_gs:1.0.123
+        image: mcr.microsoft.com/azuredocs/azure-vote-front:v1
         ports:
         - containerPort: 80
         resources:
           requests:
             cpu: 250m
+            memory: 100Mi
           limits:
             cpu: 500m
+            memory: 500Mi
         env:
         - name: REDIS
           value: "clustredis"
@@ -39,10 +40,10 @@ spec:
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: autoscalevoteraja
+  name: autoscalevote
 spec:
   maxReplicas: 8
-  minReplicas: 2
+  minReplicas: 1
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment

@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
-  namespace : prod
   labels:
     app: redislb
 spec:
@@ -23,6 +22,13 @@ spec:
       - name: redis
         image: redis
         args: ["--requirepass","$(REDIS_PWD)"]
+        resources:
+          requests:
+            cpu: 250m
+            memory: 100Mi
+          limits:
+            cpu: 500m
+            memory: 500Mi
         env:
         - name: ALLOW_EMPTY_PASSWORD
           value: "no"
